@@ -1,0 +1,60 @@
+import com.jcraft.jsch.*;
+
+public class ScpBetweenContainers {
+    public static void main(String[] args) {
+        String sourceContainerHost = "container1"; // Hostname or IP of source container
+        String sourceContainerUsername = "username"; // Username of source container
+        String sourceContainerPassword = "password"; // Password of source container
+
+        String destinationContainerHost = "container2"; // Hostname or IP of destination container
+        String destinationContainerUsername = "username"; // Username of destination container
+        String destinationContainerPassword = "password"; // Password of destination container
+
+        String sourceFile = "/path/to/source/file.txt";
+        String destinationFile = "/path/to/destination/file.txt";
+
+        try {
+            JSch sourceJsch = new JSch();
+            sourceJsch.setKnownHosts("/home/mkyong/.ssh/known_hosts");
+
+            Session sourceSession = sourceJsch.getSession(sourceContainerUsername, sourceContainerHost);
+            sourceSession.setPassword(sourceContainerPassword);
+            sourceSession.setConfig("StrictHostKeyChecking", "no");
+            sourceSession.connect();
+
+            Channel sourceChannel = sourceSession.openChannel("sftp");
+            sourceChannel.connect();
+
+            ChannelSftp sourceSftp = (ChannelSftp) sourceChannel;
+
+            JSch destinationJsch = new JSch();
+            destinationJsch.setKnownHosts("/home/mkyong/.ssh/known_hosts");
+
+            Session destinationSession = destinationJsch.getSession(destinationContainerUsername, destinationContainerHost);
+            destinationSession.setPassword(destinationContainerPassword);
+            destinationSession.setConfig("StrictHostKeyChecking", "no");
+            destinationSession.connect();
+
+            Channel destinationChannel = destinationSession.openChannel("sftp");
+            destinationChannel.connect();
+
+            ChannelSftp destinationSftp = (ChannelSftp) destinationChannel;
+
+            // Transfer file from source to destination
+            sourceSftp.get(sourceFile, destinationFile);
+
+            // Retrieve file back from destination to source
+            destinationSftp.get(destinationFile, sourceFile);
+
+            sourceSftp.exit();
+            sourceSession.disconnect();
+
+            destinationSftp.exit();
+            destinationSession.disconnect();
+
+            System.out.println("File transferred successfully from source to destination container and retrieved back.");
+        } catch (JSchException | SftpException e) {
+            e.printStackTrace();
+        }
+    }
+}
